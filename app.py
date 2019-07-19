@@ -6,6 +6,14 @@ import json
 import time
 import random
 import requests
+import threading
+
+import http.server
+
+from urllib import parse
+
+
+import socketserver
 
 #### Sample Rest API Call:
 # curl -X POST \
@@ -18,6 +26,59 @@ import requests
 #         ]
 #       }' \
 #   https://api.datadoghq.com/api/v1/series?api_key=XYZ'
+
+class MetricsSender(threading.Thread):
+    def __init__(self, interval, batch_size, metric_name, tags, url, mean, standard_dev):
+        threading.Thread.__init__(self)
+        self.interval = interval
+        self.batch_size = batch_size
+        self.metric_name = metric_name
+        self.tags = tags
+        self.url = url
+        self.mean = mean
+        self.standard_dev = standard_dev
+    def run(self):
+        print ("Starting " + self.name)
+        start_metrics(interval, batch_size, metric_name, tags, url, mean, standard_dev)
+        print ("Exiting " + self.name)
+
+class ThreadedHTTPServer(object):
+    handler = http.server.SimpleHTTPRequestHandler
+    def __init__(self, host, port):
+        self.server = socketserver.TCPServer((host, port), self.handler)
+        self.server_thread = threading.Thread(target=self.server.serve_forever)
+        self.server_thread.daemon = True
+
+    def start(self):
+        self.server_thread.start()
+
+    def stop(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+def start_metrics(interval, batch_size, metric_name, tags, url, mean, standard_dev):
+    metrics = []
+    while True:
+        metric = [time.time(), random.gauss(mean, standard_dev)]
+        print(metric)
+        metrics.append(metric)
+        time.sleep(interval)
+
+        if (len(metrics) >= batch_size):
+            print(metrics)
+            payload = {
+                "series": [{
+                    "metric": metric_name,
+                    "points": metrics,
+                    "type": "gauge",
+                    "tags": tags
+                }]
+            }
+            print(json.dumps(payload))
+            r = requests.post(url, data=json.dumps(payload))
+            print(r)
+
+            metrics = []
 
 if __name__ == '__main__':
     print("Starting demo datadog app.")
@@ -61,18 +122,22 @@ if __name__ == '__main__':
     parser.add_argument("-k", "--api-key",
                         default=os.environ.get('DD_API_KEY', None))
 
+    parser.add_argument("-p", "--port",
+                        default=os.environ.get('DD_PORT', 8000))
+
     args = parser.parse_args()
 
     # print(args)
 
-    interval     = args.interval
-    batch_size   = args.batch_size
-    mean         = args.mean
-    standard_dev = args.standard_dev
-    metric_name  = args.metric_name
-    app_name     = args.app_name
-    env_name     = args.env_name
-    version      = args.version
+    interval        = args.interval
+    batch_size      = args.batch_size
+    mean            = args.mean
+    standard_dev    = args.standard_dev
+    metric_name     = args.metric_name
+    app_name        = args.app_name
+    env_name        = args.env_name
+    version         = args.version
+    port            = int(args.port)
 
     print("Generating metrics every " + str(interval) + " second(s), batching metrics in groups of " + str(batch_size))
 
@@ -90,26 +155,17 @@ if __name__ == '__main__':
 
     # print(url)
     print(tags)
+
+    # Write file
+    hostname = os.environ.get('HOSTNAME')
+    text = f"<html>Inside container {hostname}, producing metrics every {interval} seconds, with a mean of {mean} and a standard deviation of {standard_dev}</html>\n"
+    with open('/var/www/index.html', 'w') as f:
+        f.write(text)
     
-    metrics = []
-    while True:
-        metric = [time.time(), random.gauss(mean, standard_dev)]
-        print(metric)
-        metrics.append(metric)
-        time.sleep(interval)
+    os.chdir('/var/www')
 
-        if (len(metrics) >= batch_size):
-            print(metrics)
-            payload = {
-                "series": [{
-                    "metric": metric_name,
-                    "points": metrics,
-                    "type": "gauge",
-                    "tags": tags
-                }]
-            }
-            print(json.dumps(payload))
-            r = requests.post(url, data=json.dumps(payload))
-            print(r)
+    m_thread = MetricsSender(interval, batch_size, metric_name, tags, url, mean, standard_dev)
+    s_thread = ThreadedHTTPServer('', port)
 
-            metrics = []
+    m_thread.start()
+    s_thread.start()
