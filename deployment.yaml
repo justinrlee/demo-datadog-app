@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datadog-persistent
+  labels:
+    app: datadog-persistent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datadog-persistent
+      environment: persistent
+  template:
+    metadata:
+      labels:
+        app: datadog-persistent
+        environment: persistent
+    spec:
+      containers:
+      - name: toolbox
+        image: justinrlee/demo-datadog-app:latest
+        env:
+        - name: DD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: datadog
+              key: key
+        - name: DD_APP_NAME
+          value: datadog-demo-app
+        - name: DD_VERSION
+          value: "1.0"
+        - name: DD_ENV_NAME
+          value: persistent
+        - name: DD_MEAN
+          value: "1000"
+        - name: DD_STANDARD_DEV
+          value: "30"
+        imagePullPolicy: Always
