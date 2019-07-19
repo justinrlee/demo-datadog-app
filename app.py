@@ -87,12 +87,12 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--interval",
                         help="Metric reporting interval (in seconds)",
                         type=int,
-                        default=os.environ.get('DD_INTERVAL', 5))
+                        default=os.environ.get('DD_INTERVAL', 2))
 
     parser.add_argument("-b", "--batch-size",
                         help="Number of metrics to send at a time",
                         type=int,
-                        default=os.environ.get('DD_BATCH_SIZE', 24))
+                        default=os.environ.get('DD_BATCH_SIZE', 30))
 
     parser.add_argument("-m", "--mean",
                         help="Metric average value",
