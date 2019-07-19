@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: datadog-canary
+    stack: canary
+  name: datadog-canary-canary
+  namespace: sales-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datadog-canary
+      stack: canary
+  template:
+    metadata:
+      labels:
+        app: datadog-canary
+        stack: canary
+    spec:
+      containers:
+      - image: 'justinrlee/demo-datadog-app:latest'
+        name: datadog-canary-metrics
+        env:
+        - name: DD_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: datadog
+              key: key
+        - name: DD_APP_NAME
+          value: datadog-canary
+        - name: DD_VERSION
+          value: "1.0"
+        - name: DD_ENV_NAME
+          value: canary
+        - name: DD_MEAN
+          value: "800"
+        - name: DD_STANDARD_DEV
+          value: "30"
+        imagePullPolicy: Always
