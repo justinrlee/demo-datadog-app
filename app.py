@@ -87,12 +87,12 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--interval",
                         help="Metric reporting interval (in seconds)",
                         type=int,
-                        default=os.environ.get('DD_INTERVAL', 2))
+                        default=os.environ.get('DD_INTERVAL', 1))
 
     parser.add_argument("-b", "--batch-size",
                         help="Number of metrics to send at a time",
                         type=int,
-                        default=os.environ.get('DD_BATCH_SIZE', 30))
+                        default=os.environ.get('DD_BATCH_SIZE', 60))
 
     parser.add_argument("-m", "--mean",
                         help="Metric average value",
@@ -158,7 +158,7 @@ if __name__ == '__main__':
 
     # Write file
     hostname = os.environ.get('HOSTNAME')
-    text = f"<html>Inside container {hostname}, producing metrics every {interval} seconds, with a mean of {mean} and a standard deviation of {standard_dev}</html>\n"
+    text = f"<html>Inside container {hostname} (application:{app_name}, version:{version}, environment:{env_name}), producing metrics every {interval} seconds, with a mean of {mean} and a standard deviation of {standard_dev}</html>\n"
     with open('/var/www/index.html', 'w') as f:
         f.write(text)
     
